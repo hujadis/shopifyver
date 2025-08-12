@@ -1,6 +1,6 @@
 // Shopify API utilities for fetching categories and products
 
-// Fetch Shopify collections (categories)
+// Fetch Shopify product types (categories)
 export const fetchShopifyCollections = async (shop, accessToken) => {
   if (!shop || !accessToken) {
     throw new Error('Shop URL and Access Token are required');
@@ -14,7 +14,8 @@ export const fetchShopifyCollections = async (shop, accessToken) => {
     const params = new URLSearchParams({
       shop: cleanShop,
       accessToken,
-      endpoint: 'collections.json'
+      endpoint: 'products.json',
+      limit: '250'
     });
     
     const response = await fetch(`/api/shopify?${params.toString()}`, {
@@ -30,10 +31,22 @@ export const fetchShopifyCollections = async (shop, accessToken) => {
     }
 
     const data = await response.json();
-    console.log('Shopify collections fetched:', data.collections?.length || 0, 'collections');
-    return data.collections || [];
+    
+    // Extract unique product types from products
+    const productTypes = [...new Set(data.products?.map(product => product.product_type).filter(Boolean))];
+    
+    // Convert to collection-like format
+    const collections = productTypes.map((type, index) => ({
+      id: index + 1,
+      title: type,
+      handle: type.toLowerCase().replace(/\s+/g, '-'),
+      products_count: data.products?.filter(product => product.product_type === type).length || 0
+    }));
+    
+    console.log('Shopify product types fetched:', collections.length, 'types');
+    return collections;
   } catch (error) {
-    console.error('Error fetching Shopify collections:', error);
+    console.error('Error fetching Shopify product types:', error);
     throw error; // Re-throw to show real error to user
   }
 };

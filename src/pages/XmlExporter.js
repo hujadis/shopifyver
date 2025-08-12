@@ -316,10 +316,10 @@ const XmlExporter = () => {
           )}
         </div>
 
-        {/* Load Shopify Collections */}
+        {/* Load Shopify Product Types */}
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Shopify Collections</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Shopify Product Types</h3>
             <button
               onClick={loadShopifyCollections}
               disabled={!formData.shop || !formData.accessToken || isLoadingCollections}
@@ -333,7 +333,7 @@ const XmlExporter = () => {
               ) : (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Load Collections
+                  Load Product Types
                 </>
               )}
             </button>
@@ -341,7 +341,7 @@ const XmlExporter = () => {
           
           {shopifyCollections.length > 0 && (
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Available Shopify Collections:</h4>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Available Shopify Product Types:</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {shopifyCollections.map(collection => (
                   <div key={collection.id} className="text-sm text-gray-600">
@@ -362,10 +362,10 @@ const XmlExporter = () => {
             <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
               <h4 className="text-sm font-medium text-gray-900 mb-3">Add Category Mapping</h4>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Shopify Category */}
+                {/* Shopify Product Type */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Shopify Category
+                    Shopify Product Type
                   </label>
                   <select
                     value={selectedMapping.shopifyCategory}
@@ -375,7 +375,7 @@ const XmlExporter = () => {
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Select Shopify category</option>
+                    <option value="">Select Shopify product type</option>
                     {shopifyCollections.map(collection => (
                       <option key={collection.id} value={collection.title}>{collection.title}</option>
                     ))}

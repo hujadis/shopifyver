@@ -7,16 +7,18 @@ export const fetchShopifyCollections = async (shop, accessToken) => {
   }
 
   try {
-    const response = await fetch('/api/shopify', {
-      method: 'POST',
+    // Use GET request with query parameters to avoid POST issues
+    const params = new URLSearchParams({
+      shop,
+      accessToken,
+      endpoint: 'collections.json'
+    });
+    
+    const response = await fetch(`/api/shopify?${params.toString()}`, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        shop,
-        accessToken,
-        endpoint: 'collections.json'
-      })
+      }
     });
 
     if (!response.ok) {
@@ -40,17 +42,19 @@ export const fetchShopifyProducts = async (shop, accessToken) => {
   }
 
   try {
-    const response = await fetch('/api/shopify', {
-      method: 'POST',
+    // Use GET request with query parameters to avoid POST issues
+    const params = new URLSearchParams({
+      shop,
+      accessToken,
+      endpoint: 'products.json',
+      limit: '250'
+    });
+    
+    const response = await fetch(`/api/shopify?${params.toString()}`, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        shop,
-        accessToken,
-        endpoint: 'products.json',
-        params: { limit: 250 }
-      })
+      }
     });
 
     if (!response.ok) {
@@ -74,20 +78,20 @@ export const fetchShopifyVariants = async (shop, accessToken) => {
   }
 
   try {
-    const response = await fetch('/api/shopify', {
-      method: 'POST',
+    // Use GET request with query parameters to avoid POST issues
+    const params = new URLSearchParams({
+      shop,
+      accessToken,
+      endpoint: 'products.json',
+      limit: '250',
+      fields: 'variants'
+    });
+    
+    const response = await fetch(`/api/shopify?${params.toString()}`, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        shop,
-        accessToken,
-        endpoint: 'products.json',
-        params: { 
-          limit: 250,
-          fields: 'variants'
-        }
-      })
+      }
     });
 
     if (!response.ok) {

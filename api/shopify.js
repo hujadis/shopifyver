@@ -12,22 +12,36 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Allow both GET (for testing) and POST (for actual use)
+  // Handle both GET and POST requests
+  let shop, accessToken, endpoint, params = {};
+  
   if (req.method === 'GET') {
-    return res.status(200).json({ 
-      message: 'Shopify API proxy is working!',
-      method: req.method,
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  if (req.method !== 'POST') {
+    // Extract parameters from query string
+    shop = req.query.shop;
+    accessToken = req.query.accessToken;
+    endpoint = req.query.endpoint;
+    params = {
+      limit: req.query.limit,
+      fields: req.query.fields
+    };
+    
+    // If no endpoint specified, return test response
+    if (!endpoint) {
+      return res.status(200).json({ 
+        message: 'Shopify API proxy is working!',
+        method: req.method,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } else if (req.method === 'POST') {
+    // Extract parameters from request body
+    console.log('Request body:', req.body);
+    ({ shop, accessToken, endpoint, params = {} } = req.body);
+  } else {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    console.log('Request body:', req.body);
-    const { shop, accessToken, endpoint, params = {} } = req.body;
 
     if (!shop || !accessToken || !endpoint) {
       console.log('Missing parameters:', { shop: !!shop, accessToken: !!accessToken, endpoint: !!endpoint });

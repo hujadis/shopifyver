@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Upload, Download, Trash2, Save } from 'lucide-react';
+import { Download, Trash2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Settings = () => {

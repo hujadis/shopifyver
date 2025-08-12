@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Copy, ExternalLink } from 'lucide-react';
+import { Download, Copy, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { generateProductXml, generateStockXml, fetchShopifyProducts, fetchShopifyVariants } from '../utils/xmlGenerator';
+import { getParentCategories, getSubCategories, getSub2Categories } from '../utils/categories';
 
 const XmlExporter = () => {
   const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     shop: searchParams.get('shop') || '',
+    accessToken: '',
     type: searchParams.get('type') || 'products',
     withSizes: searchParams.get('sizes') === 'true',
     discount: searchParams.get('discount') === 'true',
@@ -14,6 +17,12 @@ const XmlExporter = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [xmlResult, setXmlResult] = useState('');
   const [apiUrl, setApiUrl] = useState('');
+  const [showToken, setShowToken] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState({
+    parent: '',
+    sub: '',
+    sub2: ''
+  });
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -41,64 +50,46 @@ const XmlExporter = () => {
       return;
     }
 
+    if (!formData.accessToken) {
+      toast.error('Please enter your Shopify access token');
+      return;
+    }
+
     setIsLoading(true);
     const url = generateApiUrl();
     setApiUrl(url);
 
     try {
-      // In a real app, this would call your backend API
-      // For now, we'll simulate the response
+      let xmlResult = '';
+      
+      if (formData.type === 'products') {
+        // Fetch products from Shopify
+        const products = await fetchShopifyProducts(formData.shop, formData.accessToken);
+        
+        // Apply category mapping if selected
+        if (selectedCategory.parent) {
+          products.forEach(product => {
+            product.category = {
+              parent: selectedCategory.parent,
+              sub: selectedCategory.sub,
+              sub2: selectedCategory.sub2,
+              id: '123, 456' // Mock category ID
+            };
+          });
+        }
+        
+        // Generate product XML
+        xmlResult = generateProductXml(products, formData.withSizes);
+      } else {
+        // Fetch variants from Shopify
+        const variants = await fetchShopifyVariants(formData.shop, formData.accessToken);
+        
+        // Generate stock XML
+        xmlResult = generateStockXml(variants, formData.discount);
+      }
+      
+      setXmlResult(xmlResult);
       toast.success('XML export generated successfully!');
-      
-      // Simulate XML response
-      const mockXml = `<?xml version="1.0" encoding="UTF-8"?>
-<products>
-  <product>
-    <product-unique-id><![CDATA[123456]]></product-unique-id>
-    <title><![CDATA[Sample Product]]></title>
-    <long-description><![CDATA[<p>Product description</p>]]></long-description>
-    <video-youtube></video-youtube>
-    <parent-category-name><![CDATA[Vaikams ir kudikiams]]></parent-category-name>
-    <sub-category-name><![CDATA[Zaislai vaikams iki 3 metu]]></sub-category-name>
-    <sub2-category-name><![CDATA[Stumdukai, paspiriamos masineles]]></sub2-category-name>
-    <category-id>123, 456</category-id>
-    <properties>
-      <property>
-        <id><![CDATA[pa_brand]]></id>
-        <values>
-          <value><![CDATA[Sample Brand]]></value>
-        </values>
-      </property>
-    </properties>
-    <colours>
-      <colour>
-        <colour-title><![CDATA[Red]]></colour-title>
-        <images>
-          <image>
-            <url>https://example.com/image.jpg</url>
-          </image>
-        </images>
-        <modifications>
-          <modification>
-            <modification-title><![CDATA[Large]]></modification-title>
-            <weight>0.5</weight>
-            <length>10</length>
-            <height>5</height>
-            <width>5</width>
-            <attributes>
-              <barcodes>
-                <barcode><![CDATA[1234567890123]]></barcode>
-              </barcodes>
-              <supplier-code><![CDATA[SKU123]]></supplier-code>
-            </attributes>
-          </modification>
-        </modifications>
-      </colour>
-    </colours>
-  </product>
-</products>`;
-      
-      setXmlResult(mockXml);
     } catch (error) {
       toast.error('Failed to generate XML export');
       console.error('Export error:', error);
@@ -155,6 +146,37 @@ const XmlExporter = () => {
             />
             <p className="mt-1 text-sm text-gray-500">
               Enter your Shopify shop URL without https://
+            </p>
+          </div>
+
+          {/* Access Token */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Shopify Access Token
+            </label>
+            <div className="relative">
+              <input
+                type={showToken ? "text" : "password"}
+                name="accessToken"
+                value={formData.accessToken}
+                onChange={handleInputChange}
+                placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowToken(!showToken)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {showToken ? (
+                  <EyeOff className="h-4 w-4 text-gray-400" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-400" />
+                )}
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-gray-500">
+              Your Shopify private app access token
             </p>
           </div>
 
@@ -216,6 +238,82 @@ const XmlExporter = () => {
             </div>
           )}
         </div>
+
+        {/* Category Mapping */}
+        {formData.type === 'products' && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Category Mapping</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Parent Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Parent Category
+                </label>
+                <select
+                  value={selectedCategory.parent}
+                  onChange={(e) => setSelectedCategory(prev => ({
+                    ...prev,
+                    parent: e.target.value,
+                    sub: '',
+                    sub2: ''
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select parent category</option>
+                  {getParentCategories().map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sub Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sub Category
+                </label>
+                <select
+                  value={selectedCategory.sub}
+                  onChange={(e) => setSelectedCategory(prev => ({
+                    ...prev,
+                    sub: e.target.value,
+                    sub2: ''
+                  }))}
+                  disabled={!selectedCategory.parent}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                >
+                  <option value="">Select sub category</option>
+                  {selectedCategory.parent && getSubCategories(selectedCategory.parent).map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sub2 Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sub2 Category
+                </label>
+                <select
+                  value={selectedCategory.sub2}
+                  onChange={(e) => setSelectedCategory(prev => ({
+                    ...prev,
+                    sub2: e.target.value
+                  }))}
+                  disabled={!selectedCategory.sub}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                >
+                  <option value="">Select sub2 category</option>
+                  {selectedCategory.sub && getSub2Categories(selectedCategory.parent, selectedCategory.sub).map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              Select categories to map your Shopify products to the exact WordPress structure
+            </p>
+          </div>
+        )}
 
         {/* Export Button */}
         <div className="mt-6">

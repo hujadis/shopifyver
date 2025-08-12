@@ -71,6 +71,8 @@ const XmlExporter = () => {
         toast.error('Shop not found. Please check your shop URL.');
       } else if (error.message.includes('403')) {
         toast.error('Access denied. Please check your app permissions.');
+      } else if (error.message.includes('Custom domain not supported')) {
+        toast.error('Custom domains are not supported. Use your Shopify shop URL (e.g., "your-shop.myshopify.com")');
       } else {
         toast.error(`Failed to load collections: ${error.message}`);
       }

@@ -35,7 +35,21 @@ export default async function handler(req, res) {
     }
 
     // Clean shop URL
-    const cleanShop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    let cleanShop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    
+    // If it's not a myshopify.com URL, try to construct it
+    if (!cleanShop.includes('.myshopify.com')) {
+      // For custom domains like "leclat.lt", we need to find the actual Shopify shop
+      // This is a common issue - custom domains don't work with Shopify Admin API
+      console.log('Custom domain detected:', cleanShop);
+      console.log('Note: Custom domains like "leclat.lt" cannot be used with Shopify Admin API');
+      console.log('You need to use the actual Shopify shop URL (e.g., "your-shop.myshopify.com")');
+      
+      return res.status(400).json({ 
+        error: 'Custom domain not supported',
+        details: `The domain "${cleanShop}" appears to be a custom domain. Shopify Admin API requires the actual Shopify shop URL (e.g., "your-shop.myshopify.com"). Please check your Shopify admin for the correct shop URL.`
+      });
+    }
     
     // Build API URL
     const apiUrl = `https://${cleanShop}/admin/api/2024-01/${endpoint}`;

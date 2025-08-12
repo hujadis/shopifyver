@@ -51,7 +51,10 @@ const XmlExporter = () => {
 
   // Load Shopify collections when credentials are provided
   const loadShopifyCollections = async () => {
-    if (!formData.shop || !formData.accessToken) return;
+    if (!formData.shop || !formData.accessToken) {
+      toast.error('Please enter both Shop URL and Access Token');
+      return;
+    }
     
     setIsLoadingCollections(true);
     try {
@@ -59,8 +62,18 @@ const XmlExporter = () => {
       setShopifyCollections(collections);
       toast.success(`Loaded ${collections.length} Shopify collections`);
     } catch (error) {
-      toast.error('Failed to load Shopify collections');
       console.error('Error loading collections:', error);
+      
+      // Show more specific error messages
+      if (error.message.includes('401')) {
+        toast.error('Invalid Access Token. Please check your credentials.');
+      } else if (error.message.includes('404')) {
+        toast.error('Shop not found. Please check your shop URL.');
+      } else if (error.message.includes('403')) {
+        toast.error('Access denied. Please check your app permissions.');
+      } else {
+        toast.error(`Failed to load collections: ${error.message}`);
+      }
     } finally {
       setIsLoadingCollections(false);
     }
@@ -131,19 +144,30 @@ const XmlExporter = () => {
         
         // Generate product XML
         xmlResult = generateProductXml(transformedProducts, formData.withSizes);
+        toast.success(`Generated XML for ${transformedProducts.length} products`);
       } else {
         // Fetch variants from Shopify
         const variants = await fetchShopifyVariants(formData.shop, formData.accessToken);
         
         // Generate stock XML
         xmlResult = generateStockXml(variants, formData.discount);
+        toast.success(`Generated XML for ${variants.length} variants`);
       }
       
       setXmlResult(xmlResult);
-      toast.success('XML export generated successfully!');
     } catch (error) {
-      toast.error('Failed to generate XML export');
       console.error('Export error:', error);
+      
+      // Show more specific error messages
+      if (error.message.includes('401')) {
+        toast.error('Invalid Access Token. Please check your credentials.');
+      } else if (error.message.includes('404')) {
+        toast.error('Shop not found. Please check your shop URL.');
+      } else if (error.message.includes('403')) {
+        toast.error('Access denied. Please check your app permissions.');
+      } else {
+        toast.error(`Failed to generate XML: ${error.message}`);
+      }
     } finally {
       setIsLoading(false);
     }

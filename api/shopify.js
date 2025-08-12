@@ -1,10 +1,11 @@
 // Vercel serverless function to proxy Shopify API calls
 export default async function handler(req, res) {
-  console.log('API called:', req.method, req.url);
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  try {
+    console.log('API called:', req.method, req.url);
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -55,8 +56,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    // Clean shop URL
+    // Clean shop URL - remove https:// and trailing slash
     let cleanShop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    console.log('Original shop URL:', shop);
+    console.log('Cleaned shop URL:', cleanShop);
     
     // If it's not a myshopify.com URL, try to construct it
     if (!cleanShop.includes('.myshopify.com')) {
@@ -114,6 +117,13 @@ export default async function handler(req, res) {
     console.error('Shopify API proxy error:', error);
     res.status(500).json({ 
       error: 'Internal server error',
+      details: error.message 
+    });
+  }
+  } catch (error) {
+    console.error('Outer handler error:', error);
+    res.status(500).json({ 
+      error: 'Server error',
       details: error.message 
     });
   }

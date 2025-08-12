@@ -7,9 +7,12 @@ export const fetchShopifyCollections = async (shop, accessToken) => {
   }
 
   try {
+    // Clean shop URL - remove https:// if present
+    const cleanShop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    
     // Use GET request with query parameters to avoid POST issues
     const params = new URLSearchParams({
-      shop,
+      shop: cleanShop,
       accessToken,
       endpoint: 'collections.json'
     });
@@ -42,9 +45,12 @@ export const fetchShopifyProducts = async (shop, accessToken) => {
   }
 
   try {
+    // Clean shop URL - remove https:// if present
+    const cleanShop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    
     // Use GET request with query parameters to avoid POST issues
     const params = new URLSearchParams({
-      shop,
+      shop: cleanShop,
       accessToken,
       endpoint: 'products.json',
       limit: '250'
@@ -78,9 +84,12 @@ export const fetchShopifyVariants = async (shop, accessToken) => {
   }
 
   try {
+    // Clean shop URL - remove https:// if present
+    const cleanShop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    
     // Use GET request with query parameters to avoid POST issues
     const params = new URLSearchParams({
-      shop,
+      shop: cleanShop,
       accessToken,
       endpoint: 'products.json',
       limit: '250',

@@ -1,5 +1,6 @@
 // Vercel serverless function to proxy Shopify API calls
 export default async function handler(req, res) {
+  console.log('API called:', req.method, req.url);
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -16,9 +17,11 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('Request body:', req.body);
     const { shop, accessToken, endpoint, params = {} } = req.body;
 
     if (!shop || !accessToken || !endpoint) {
+      console.log('Missing parameters:', { shop: !!shop, accessToken: !!accessToken, endpoint: !!endpoint });
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 

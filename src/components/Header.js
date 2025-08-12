@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Settings, Home, FileText } from 'lucide-react';
+import { ShoppingBag, Settings as SettingsIcon, Home, FileText } from 'lucide-react';
 
 const Header = () => {
   const location = useLocation();
@@ -8,7 +8,7 @@ const Header = () => {
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Home },
     { path: '/xml-exporter', label: 'XML Exporter', icon: FileText },
-    { path: '/settings', label: 'Settings', icon: Settings },
+    { path: '/settings', label: 'Settings', icon: SettingsIcon },
   ];
 
   return (

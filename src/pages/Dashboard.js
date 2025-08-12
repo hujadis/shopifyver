@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Download, Settings, BarChart3, Clock, CheckCircle } from 'lucide-react';
+import { FileText, Download, Settings as SettingsIcon, BarChart3, Clock, CheckCircle } from 'lucide-react';
 
 const Dashboard = () => {
   const stats = [
@@ -123,7 +123,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center space-x-3">
               <div className="p-1 rounded-full bg-purple-100">
-                <Settings className="h-4 w-4 text-purple-600" />
+                <SettingsIcon className="h-4 w-4 text-purple-600" />
               </div>
               <span className="text-sm text-gray-900">Settings updated</span>
             </div>

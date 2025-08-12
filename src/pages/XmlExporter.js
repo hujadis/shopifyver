@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, FileText, Settings, Copy, ExternalLink } from 'lucide-react';
+import { Download, FileText, Settings as SettingsIcon, Copy, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const XmlExporter = () => {

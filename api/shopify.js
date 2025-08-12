@@ -12,6 +12,15 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Allow both GET (for testing) and POST (for actual use)
+  if (req.method === 'GET') {
+    return res.status(200).json({ 
+      message: 'Shopify API proxy is working!',
+      method: req.method,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

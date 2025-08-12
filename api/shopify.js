@@ -25,6 +25,13 @@ export default async function handler(req, res) {
       fields: req.query.fields
     };
     
+    console.log('GET request parameters:', { 
+      shop: shop ? 'provided' : 'missing', 
+      accessToken: accessToken ? 'provided' : 'missing', 
+      endpoint: endpoint || 'missing',
+      params: Object.keys(params).length > 0 ? 'provided' : 'none'
+    });
+    
     // If no endpoint specified, return test response
     if (!endpoint) {
       return res.status(200).json({ 
@@ -71,8 +78,13 @@ export default async function handler(req, res) {
     // Add query parameters
     const url = new URL(apiUrl);
     Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
+      if (value) {
+        url.searchParams.append(key, value);
+      }
     });
+
+    console.log('Making Shopify API request to:', url.toString());
+    console.log('With headers:', { 'X-Shopify-Access-Token': accessToken ? 'provided' : 'missing' });
 
     // Make request to Shopify API
     const response = await fetch(url.toString(), {
@@ -83,8 +95,11 @@ export default async function handler(req, res) {
       }
     });
 
+    console.log('Shopify API response status:', response.status);
+    
     if (!response.ok) {
       const errorText = await response.text();
+      console.log('Shopify API error response:', errorText);
       return res.status(response.status).json({ 
         error: `Shopify API error: ${response.status}`,
         details: errorText
@@ -92,6 +107,7 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
+    console.log('Shopify API success, data keys:', Object.keys(data));
     res.status(200).json(data);
 
   } catch (error) {

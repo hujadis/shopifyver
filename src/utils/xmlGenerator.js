@@ -174,78 +174,37 @@ export const generateStockXml = (variants, withDiscount = false) => {
   return xml;
 };
 
-// Mock Shopify API functions (in real app, these would call actual Shopify API)
-export const fetchShopifyProducts = async (shop, accessToken) => {
-  // Mock data - in real app this would call Shopify API
-  return [
-    {
-      id: 123456,
-      title: 'Sample Product',
-      description: 'This is a sample product description with some details about the product.',
-      brand: 'Sample Brand',
-      category: {
-        parent: 'Vaikams ir kudikiams',
-        sub: 'Zaislai vaikams iki 3 metu',
-        sub2: 'Stumdukai, paspiriamos masineles',
-        id: '123, 456'
-      },
-      image: 'https://example.com/image.jpg',
-      variants: [
-        {
-          id: 1,
-          sku: 'SKU123',
-          barcode: '1234567890123',
-          price: '29.99',
-          compare_at_price: '39.99',
-          inventory_quantity: 10,
-          color: 'Red',
-          size: 'Large',
-          weight: '0.5',
-          length: '10',
-          height: '5',
-          width: '5',
-          image: 'https://example.com/image-red.jpg',
-          delivery_time: '24-48 hours'
-        },
-        {
-          id: 2,
-          sku: 'SKU124',
-          barcode: '1234567890124',
-          price: '29.99',
-          compare_at_price: '39.99',
-          inventory_quantity: 5,
-          color: 'Blue',
-          size: 'Medium',
-          weight: '0.4',
-          length: '8',
-          height: '4',
-          width: '4',
-          image: 'https://example.com/image-blue.jpg',
-          delivery_time: '24-48 hours'
-        }
-      ]
-    }
-  ];
-};
-
-export const fetchShopifyVariants = async (shop, accessToken) => {
-  // Mock data - in real app this would call Shopify API
-  return [
-    {
-      sku: 'SKU123',
-      barcode: '1234567890123',
-      price: '29.99',
-      compare_at_price: '39.99',
-      inventory_quantity: 10,
-      delivery_time: '24-48 hours'
+// Transform Shopify product to match our XML structure
+export const transformShopifyProduct = (shopifyProduct, categoryMapping) => {
+  const mappedCategory = categoryMapping[shopifyProduct.product_type] || categoryMapping[shopifyProduct.collections?.[0]?.title] || {};
+  
+  return {
+    id: shopifyProduct.id,
+    title: shopifyProduct.title,
+    description: shopifyProduct.body_html || '',
+    brand: shopifyProduct.vendor || '',
+    category: {
+      parent: mappedCategory.parent || '',
+      sub: mappedCategory.sub || '',
+      sub2: mappedCategory.sub2 || '',
+      id: mappedCategory.id || ''
     },
-    {
-      sku: 'SKU124',
-      barcode: '1234567890124',
-      price: '29.99',
-      compare_at_price: '39.99',
-      inventory_quantity: 5,
+    image: shopifyProduct.images?.[0]?.src || '',
+    variants: shopifyProduct.variants?.map(variant => ({
+      id: variant.id,
+      sku: variant.sku || '',
+      barcode: variant.barcode || '',
+      price: variant.price || '0.00',
+      compare_at_price: variant.compare_at_price || '',
+      inventory_quantity: variant.inventory_quantity || 0,
+      color: variant.option1 || '',
+      size: variant.option2 || '',
+      weight: variant.weight || '0',
+      length: '10', // Default values - could be enhanced
+      height: '5',
+      width: '5',
+      image: shopifyProduct.images?.[0]?.src || '',
       delivery_time: '24-48 hours'
-    }
-  ];
+    })) || []
+  };
 };

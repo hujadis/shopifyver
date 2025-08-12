@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Copy, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import { Download, Copy, ExternalLink, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { generateProductXml, generateStockXml, fetchShopifyProducts, fetchShopifyVariants } from '../utils/xmlGenerator';
+import { generateProductXml, generateStockXml, transformShopifyProduct } from '../utils/xmlGenerator';
+import { fetchShopifyCollections, fetchShopifyProducts, fetchShopifyVariants } from '../utils/shopifyApi';
 import { getParentCategories, getSubCategories, getSub2Categories } from '../utils/categories';
 
 const XmlExporter = () => {
@@ -18,10 +19,14 @@ const XmlExporter = () => {
   const [xmlResult, setXmlResult] = useState('');
   const [apiUrl, setApiUrl] = useState('');
   const [showToken, setShowToken] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState({
-    parent: '',
-    sub: '',
-    sub2: ''
+  const [shopifyCollections, setShopifyCollections] = useState([]);
+  const [isLoadingCollections, setIsLoadingCollections] = useState(false);
+  const [categoryMapping, setCategoryMapping] = useState({});
+  const [selectedMapping, setSelectedMapping] = useState({
+    shopifyCategory: '',
+    pluginParent: '',
+    pluginSub: '',
+    pluginSub2: ''
   });
 
   const handleInputChange = (e) => {
@@ -44,6 +49,59 @@ const XmlExporter = () => {
     }
   };
 
+  // Load Shopify collections when credentials are provided
+  const loadShopifyCollections = async () => {
+    if (!formData.shop || !formData.accessToken) return;
+    
+    setIsLoadingCollections(true);
+    try {
+      const collections = await fetchShopifyCollections(formData.shop, formData.accessToken);
+      setShopifyCollections(collections);
+      toast.success(`Loaded ${collections.length} Shopify collections`);
+    } catch (error) {
+      toast.error('Failed to load Shopify collections');
+      console.error('Error loading collections:', error);
+    } finally {
+      setIsLoadingCollections(false);
+    }
+  };
+
+  // Add category mapping
+  const addCategoryMapping = () => {
+    if (!selectedMapping.shopifyCategory || !selectedMapping.pluginParent) {
+      toast.error('Please select both Shopify category and plugin parent category');
+      return;
+    }
+
+    const mapping = {
+      [selectedMapping.shopifyCategory]: {
+        parent: selectedMapping.pluginParent,
+        sub: selectedMapping.pluginSub,
+        sub2: selectedMapping.pluginSub2,
+        id: '123, 456' // Mock category ID
+      }
+    };
+
+    setCategoryMapping(prev => ({ ...prev, ...mapping }));
+    setSelectedMapping({
+      shopifyCategory: '',
+      pluginParent: '',
+      pluginSub: '',
+      pluginSub2: ''
+    });
+    toast.success('Category mapping added successfully!');
+  };
+
+  // Remove category mapping
+  const removeCategoryMapping = (shopifyCategory) => {
+    setCategoryMapping(prev => {
+      const newMapping = { ...prev };
+      delete newMapping[shopifyCategory];
+      return newMapping;
+    });
+    toast.success('Category mapping removed');
+  };
+
   const handleExport = async () => {
     if (!formData.shop) {
       toast.error('Please enter your Shopify shop URL');
@@ -64,22 +122,15 @@ const XmlExporter = () => {
       
       if (formData.type === 'products') {
         // Fetch products from Shopify
-        const products = await fetchShopifyProducts(formData.shop, formData.accessToken);
+        const shopifyProducts = await fetchShopifyProducts(formData.shop, formData.accessToken);
         
-        // Apply category mapping if selected
-        if (selectedCategory.parent) {
-          products.forEach(product => {
-            product.category = {
-              parent: selectedCategory.parent,
-              sub: selectedCategory.sub,
-              sub2: selectedCategory.sub2,
-              id: '123, 456' // Mock category ID
-            };
-          });
-        }
+        // Transform products with category mapping
+        const transformedProducts = shopifyProducts.map(product => 
+          transformShopifyProduct(product, categoryMapping)
+        );
         
         // Generate product XML
-        xmlResult = generateProductXml(products, formData.withSizes);
+        xmlResult = generateProductXml(transformedProducts, formData.withSizes);
       } else {
         // Fetch variants from Shopify
         const variants = await fetchShopifyVariants(formData.shop, formData.accessToken);
@@ -239,78 +290,179 @@ const XmlExporter = () => {
           )}
         </div>
 
+        {/* Load Shopify Collections */}
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Shopify Collections</h3>
+            <button
+              onClick={loadShopifyCollections}
+              disabled={!formData.shop || !formData.accessToken || isLoadingCollections}
+              className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoadingCollections ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Load Collections
+                </>
+              )}
+            </button>
+          </div>
+          
+          {shopifyCollections.length > 0 && (
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Available Shopify Collections:</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {shopifyCollections.map(collection => (
+                  <div key={collection.id} className="text-sm text-gray-600">
+                    • {collection.title} ({collection.products_count} products)
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Category Mapping */}
         {formData.type === 'products' && (
           <div className="mt-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Category Mapping</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Parent Category */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Parent Category
-                </label>
-                <select
-                  value={selectedCategory.parent}
-                  onChange={(e) => setSelectedCategory(prev => ({
-                    ...prev,
-                    parent: e.target.value,
-                    sub: '',
-                    sub2: ''
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select parent category</option>
-                  {getParentCategories().map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
+            
+            {/* Add New Mapping */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Add Category Mapping</h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Shopify Category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Shopify Category
+                  </label>
+                  <select
+                    value={selectedMapping.shopifyCategory}
+                    onChange={(e) => setSelectedMapping(prev => ({
+                      ...prev,
+                      shopifyCategory: e.target.value
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Shopify category</option>
+                    {shopifyCollections.map(collection => (
+                      <option key={collection.id} value={collection.title}>{collection.title}</option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Sub Category */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sub Category
-                </label>
-                <select
-                  value={selectedCategory.sub}
-                  onChange={(e) => setSelectedCategory(prev => ({
-                    ...prev,
-                    sub: e.target.value,
-                    sub2: ''
-                  }))}
-                  disabled={!selectedCategory.parent}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                >
-                  <option value="">Select sub category</option>
-                  {selectedCategory.parent && getSubCategories(selectedCategory.parent).map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
+                {/* Plugin Parent Category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Plugin Parent Category
+                  </label>
+                  <select
+                    value={selectedMapping.pluginParent}
+                    onChange={(e) => setSelectedMapping(prev => ({
+                      ...prev,
+                      pluginParent: e.target.value,
+                      pluginSub: '',
+                      pluginSub2: ''
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select parent category</option>
+                    {getParentCategories().map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Sub2 Category */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sub2 Category
-                </label>
-                <select
-                  value={selectedCategory.sub2}
-                  onChange={(e) => setSelectedCategory(prev => ({
-                    ...prev,
-                    sub2: e.target.value
-                  }))}
-                  disabled={!selectedCategory.sub}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                {/* Plugin Sub Category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Plugin Sub Category
+                  </label>
+                  <select
+                    value={selectedMapping.pluginSub}
+                    onChange={(e) => setSelectedMapping(prev => ({
+                      ...prev,
+                      pluginSub: e.target.value,
+                      pluginSub2: ''
+                    }))}
+                    disabled={!selectedMapping.pluginParent}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select sub category</option>
+                    {selectedMapping.pluginParent && getSubCategories(selectedMapping.pluginParent).map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Plugin Sub2 Category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Plugin Sub2 Category
+                  </label>
+                  <select
+                    value={selectedMapping.pluginSub2}
+                    onChange={(e) => setSelectedMapping(prev => ({
+                      ...prev,
+                      pluginSub2: e.target.value
+                    }))}
+                    disabled={!selectedMapping.pluginSub}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select sub2 category</option>
+                    {selectedMapping.pluginSub && getSub2Categories(selectedMapping.pluginParent, selectedMapping.pluginSub).map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <button
+                  onClick={addCategoryMapping}
+                  disabled={!selectedMapping.shopifyCategory || !selectedMapping.pluginParent}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="">Select sub2 category</option>
-                  {selectedCategory.sub && getSub2Categories(selectedCategory.parent, selectedCategory.sub).map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
+                  Add Mapping
+                </button>
               </div>
             </div>
+
+            {/* Current Mappings */}
+            {Object.keys(categoryMapping).length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Current Category Mappings</h4>
+                <div className="space-y-2">
+                  {Object.entries(categoryMapping).map(([shopifyCategory, pluginCategory]) => (
+                    <div key={shopifyCategory} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {shopifyCategory} → {pluginCategory.parent}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {pluginCategory.sub && `${pluginCategory.sub}`}
+                          {pluginCategory.sub2 && ` → ${pluginCategory.sub2}`}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeCategoryMapping(shopifyCategory)}
+                        className="ml-2 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <p className="mt-2 text-sm text-gray-500">
-              Select categories to map your Shopify products to the exact WordPress structure
+              Map your Shopify categories to the exact WordPress plugin category structure
             </p>
           </div>
         )}

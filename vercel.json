@@ -30,10 +30,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "functions": {
-    "api/shopify.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }

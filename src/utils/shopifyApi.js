@@ -6,20 +6,22 @@ export const fetchShopifyCollections = async (shop, accessToken) => {
     throw new Error('Shop URL and Access Token are required');
   }
 
-  // Ensure shop URL has proper format
-  const cleanShop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  
   try {
-    const response = await fetch(`https://${cleanShop}/admin/api/2024-01/collections.json`, {
+    const response = await fetch('/api/shopify', {
+      method: 'POST',
       headers: {
-        'X-Shopify-Access-Token': accessToken,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({
+        shop,
+        accessToken,
+        endpoint: 'collections.json'
+      })
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Shopify API error: ${response.status} - ${errorText}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
     const data = await response.json();
@@ -37,20 +39,23 @@ export const fetchShopifyProducts = async (shop, accessToken) => {
     throw new Error('Shop URL and Access Token are required');
   }
 
-  // Ensure shop URL has proper format
-  const cleanShop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  
   try {
-    const response = await fetch(`https://${cleanShop}/admin/api/2024-01/products.json?limit=250`, {
+    const response = await fetch('/api/shopify', {
+      method: 'POST',
       headers: {
-        'X-Shopify-Access-Token': accessToken,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({
+        shop,
+        accessToken,
+        endpoint: 'products.json',
+        params: { limit: 250 }
+      })
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Shopify API error: ${response.status} - ${errorText}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
     const data = await response.json();
@@ -68,20 +73,26 @@ export const fetchShopifyVariants = async (shop, accessToken) => {
     throw new Error('Shop URL and Access Token are required');
   }
 
-  // Ensure shop URL has proper format
-  const cleanShop = shop.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  
   try {
-    const response = await fetch(`https://${cleanShop}/admin/api/2024-01/products.json?limit=250&fields=variants`, {
+    const response = await fetch('/api/shopify', {
+      method: 'POST',
       headers: {
-        'X-Shopify-Access-Token': accessToken,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({
+        shop,
+        accessToken,
+        endpoint: 'products.json',
+        params: { 
+          limit: 250,
+          fields: 'variants'
+        }
+      })
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Shopify API error: ${response.status} - ${errorText}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
     const data = await response.json();

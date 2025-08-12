@@ -11,6 +11,10 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
       "src": "/static/(.*)",
       "dest": "/static/$1"
     },
@@ -26,5 +30,10 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/shopify.js": {
+      "maxDuration": 30
+    }
+  }
 }
